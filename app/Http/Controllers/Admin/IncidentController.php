@@ -5,87 +5,88 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Incident;
 use App\Models\HumanLoss;
+use App\Models\IncidentType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use DB;
 
 class IncidentController extends Controller
 {
+    /**
+     * List all incidents
+     */
     public function index()
     {
         return view('admin.incidents.index', [
-            'incidents' => Incident::orderBy('id', 'desc')->get()
+            'incidents' => Incident::latest()->get()
         ]);
     }
 
+    /**
+     * Create page
+     */
     public function create()
     {
-        return view('admin.incidents.create');
+        $incidentTypes = IncidentType::active()->orderBy('name')->get();
+        return view('admin.incidents.create', compact('incidentTypes'));
     }
 
+    /**
+     * Store new incident
+     */
     public function store(Request $request)
     {
-        // FAST VALIDATION
-        $request->validate([
-            'incident_name'     => 'required|string|max:255',
-            'location_details'  => 'nullable|string',
-            'state'             => 'required|string|max:100',
-            'district'          => 'required|string|max:100',
-            'village'           => 'nullable|string|max:100',
-            'lat'               => 'nullable|numeric',
-            'lng'               => 'nullable|numeric',
-            'incident_date'     => 'required|date',
-            'incident_time'     => 'required',
-            'big_animal_died'   => 'nullable|numeric',
-            'small_animal_died' => 'nullable|numeric',
-            'file'              => 'nullable|file|max:4096',
-            'loss'              => 'nullable|array'
+        $validated = $request->validate([
+            'incident_name'      => 'required|string|max:255',
+            'incident_type_id'   => 'required|exists:incident_types,id',
+            'location_details'   => 'nullable|string',
+            'state'              => 'required|string|max:100',
+            'district'           => 'required|string|max:100',
+            'village'            => 'nullable|string|max:100',
+            'latitude'           => 'nullable|numeric',
+            'longitude'          => 'nullable|numeric',
+            'incident_date'      => 'required|date',
+            'incident_time'      => 'required',
+            'big_animals_died'   => 'nullable|numeric',
+            'small_animals_died' => 'nullable|numeric',
+
+            // New columns
+            'partially_house'    => 'nullable|integer',
+            'severely_house'     => 'nullable|integer',
+            'fully_house'        => 'nullable|integer',
+            'cowshed_house'      => 'nullable|integer',
+
+            'file'               => 'nullable|file|max:4096',
+            'loss'               => 'nullable|array'
         ]);
 
-        DB::transaction(function () use ($request) {
+        DB::transaction(function () use ($request, $validated) {
 
-            // FAST FILE UPLOAD (NO HELPER)
-            $filePath = $request->file('file')
-                ? $request->file('file')->store('incidents', 'public')
-                : null;
+            // File upload
+            if ($request->hasFile('file')) {
+                $validated['file_path'] = $request->file('file')->store('incidents', 'public');
+            }
 
-            // CREATE INCIDENT (FAST MASS ASSIGN)
-            $incident = Incident::create([
-                'incident_uid'     => Str::uuid(),
-                'incident_name'    => $request->incident_name,
-                'location_details' => $request->location_details,
-                'state'            => $request->state,
-                'district'         => $request->district,
-                'village'          => $request->village,
-                'lat'              => $request->lat,
-                'lng'              => $request->lng,
-                'incident_date'    => $request->incident_date,
-                'incident_time'    => $request->incident_time,
-                'file'             => $filePath,
-                'big_animal_died'  => $request->big_animal_died,
-                'small_animal_died'=> $request->small_animal_died,
-            ]);
+            $validated['incident_uid'] = Str::uuid();
 
-            // FASTEST POSSIBLE LOOP
+            /** CREATE INCIDENT */
+            $incident = Incident::create($validated);
+
+            /** CREATE HUMAN LOSS IF EXISTS */
             if ($request->loss) {
                 foreach ($request->loss as $row) {
-
-                    HumanLoss::create([
-                        'incident_id' => $incident->id,
-
-                        'name'        => $row['name'] ?? null,
-                        'age'         => $row['age'] ?? null,
-                        'sex'         => $row['sex'] ?? null,
-                        'loss_type'   => $row['loss_type'] ?? null,
-                        'address'     => $row['address'] ?? null,
-                        'state'       => $row['state'] ?? null,
-                        'district'    => $row['district'] ?? null,
-
-                        'compensation_amount'        => $row['compensation_amount'] ?? null,
+                    $incident->humanLosses()->create([
+                        'name'     => $row['name'] ?? null,
+                        'age'      => $row['age'] ?? null,
+                        'sex'      => $row['sex'] ?? null,
+                        'loss_type'=> $row['loss_type'] ?? null,
+                        'address'  => $row['address'] ?? null,
+                        'state'    => $row['state'] ?? null,
+                        'district' => $row['district'] ?? null,
+                        'compensation_amount' => $row['compensation_amount'] ?? null,
                         'compensation_received_date' => $row['compensation_received_date'] ?? null,
-                        'compensation_status'        => $row['compensation_status'] ?? null,
-
-                        'nominee' => [
+                        'compensation_status' => $row['compensation_status'] ?? null,
+                        'nominee'  => [
                             'name'     => $row['nominee_name'] ?? null,
                             'relation' => $row['nominee_relation'] ?? null,
                             'age'      => $row['nominee_age'] ?? null,
@@ -99,61 +100,62 @@ class IncidentController extends Controller
 
         return redirect()
             ->route('admin.incidents.index')
-            ->with('success', 'Incident + Human Loss saved successfully.');
+            ->with('success', 'Incident created successfully.');
     }
 
-
+    /**
+     * Edit page
+     */
     public function edit(Incident $incident)
     {
         $incident->load('humanLosses');
-        return view('admin.incidents.edit', compact('incident'));
+        $incidentTypes = IncidentType::active()->orderBy('name')->get();
+
+        return view('admin.incidents.edit', compact('incident', 'incidentTypes'));
     }
 
-
+    /**
+     * Update incident
+     */
     public function update(Request $request, Incident $incident)
     {
-        // SAME FAST VALIDATION
-        $request->validate([
-            'incident_name'     => 'required|string|max:255',
-            'location_details'  => 'nullable|string',
-            'state'             => 'required|string|max:100',
-            'district'          => 'required|string|max:100',
-            'village'           => 'nullable|string|max:100',
-            'lat'               => 'nullable|numeric',
-            'lng'               => 'nullable|numeric',
-            'incident_date'     => 'required|date',
-            'incident_time'     => 'required',
-            'big_animal_died'   => 'nullable|numeric',
-            'small_animal_died' => 'nullable|numeric',
-            'file'              => 'nullable|file|max:4096',
+        $validated = $request->validate([
+            'incident_name'      => 'required|string|max:255',
+            'incident_type_id'   => 'required|exists:incident_types,id',
+            'location_details'   => 'nullable|string',
+            'state'              => 'required|string|max:100',
+            'district'           => 'required|string|max:100',
+            'village'            => 'nullable|string|max:100',
+            'latitude'           => 'nullable|numeric',
+            'longitude'          => 'nullable|numeric',
+            'incident_date'      => 'required|date',
+            'incident_time'      => 'required',
+            'big_animals_died'   => 'nullable|numeric',
+            'small_animals_died' => 'nullable|numeric',
+
+            // New columns
+            'partially_house'    => 'nullable|integer',
+            'severely_house'     => 'nullable|integer',
+            'fully_house'        => 'nullable|integer',
+            'cowshed_house'      => 'nullable|integer',
+
+            'file'               => 'nullable|file|max:4096',
         ]);
 
-        // FAST FILE HANDLING
-        $filePath = $request->file('file')
-            ? $request->file('file')->store('incidents', 'public')
-            : $incident->file;
+        if ($request->hasFile('file')) {
+            $validated['file_path'] = $request->file('file')->store('incidents', 'public');
+        }
 
-        $incident->update([
-            'incident_name'    => $request->incident_name,
-            'location_details' => $request->location_details,
-            'state'            => $request->state,
-            'district'         => $request->district,
-            'village'          => $request->village,
-            'lat'              => $request->lat,
-            'lng'              => $request->lng,
-            'incident_date'    => $request->incident_date,
-            'incident_time'    => $request->incident_time,
-            'file'             => $filePath,
-            'big_animal_died'  => $request->big_animal_died,
-            'small_animal_died'=> $request->small_animal_died,
-        ]);
+        $incident->update($validated);
 
         return redirect()
             ->route('admin.incidents.index')
             ->with('success', 'Incident updated successfully.');
     }
 
-
+    /**
+     * Delete incident
+     */
     public function destroy(Incident $incident)
     {
         $incident->delete();

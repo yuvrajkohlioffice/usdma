@@ -9,19 +9,32 @@ use App\Models\IncidentType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use DB;
-
+use Yajra\DataTables\Facades\DataTables;
 class IncidentController extends Controller
 {
     /**
      * List all incidents
      */
-    public function index()
-    {
-        return view('admin.incidents.index', [
-            'incidents' => Incident::latest()->get()
-        ]);
+
+public function index(Request $request)
+{
+    if ($request->ajax()) {
+        $incidents = Incident::with('humanLosses', 'incidentType')->select('incidents.*');
+
+        return DataTables::of($incidents)
+        ->addColumn('incident_type', fn($incident) => $incident->incidentType->name ?? 'N/A')
+            ->addColumn('died', fn($incident) => $incident->humanLosses->where('loss_type', 'died')->count())
+            ->addColumn('missing', fn($incident) => $incident->humanLosses->where('loss_type', 'missing')->count())
+            ->addColumn('injured', fn($incident) => $incident->humanLosses->where('loss_type', 'normal_damage')->count())
+            ->addColumn('actions', function($incident){
+                return view('admin.incidents.partials.actions', compact('incident'))->render();
+            })
+            ->rawColumns(['actions'])
+            ->make(true);
     }
 
+    return view('admin.incidents.index');
+}
     /**
      * Create page
      */

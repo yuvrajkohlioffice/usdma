@@ -29,9 +29,11 @@
 
             {{-- 🏠 Dashboard --}}
             <x-sidebar.link route="dashboard" label="Dashboard" icon="fas fa-home" :active="request()->routeIs('dashboard')" />
-
+<x-sidebar.link route="admin.incidents.index" label="Add Incidents" icon="fas fa-bolt"
+                        :active="request()->routeIs('admin.incidents.*')" />
             {{-- 👑 Admin Section --}}
-            <x-sidebar.dropdown icon="fas fa-user-shield" label="Admin" :active="request()->routeIs('admin.*')">
+            <x-sidebar.dropdown icon="fas fa-user-shield" label="Admin" :active="request()->routeIs('admin.users.*') || request()->routeIs('admin.roles.*') || request()->routeIs('admin.daily_reports_fillable.*') || request()->routeIs('admin.accidental-reports-fillable.*') ||
+                    request()->routeIs('admin.accidental_reports.*')">
 
                 {{-- 👥 User Management --}}
                 <x-sidebar.dropdown icon="fas fa-users-cog" label="User Management" :active="request()->routeIs('admin.users.*') || request()->routeIs('admin.roles.*')">
@@ -74,7 +76,6 @@
                     request()->routeIs('admin.districts.*') ||
                     request()->routeIs('admin.dhams.*') ||
                     request()->routeIs('admin.villages.*') ||
-                    request()->routeIs('admin.incidents.*') ||
                     request()->routeIs('admin.tourist-visitor-details.*') ||
                     request()->routeIs('admin.incident-types.*') ||
                     request()->routeIs('admin.disaster-types.*') ||
@@ -89,8 +90,7 @@
                     <x-sidebar.link route="admin.tehsils.index" label="Tehsils" icon="fas fa-map" :active="request()->routeIs('admin.tehsils.*')" />
                     <x-sidebar.link route="admin.villages.index" label="Villages" icon="fas fa-home"
                         :active="request()->routeIs('admin.villages.*')" />
-                    <x-sidebar.link route="admin.incidents.index" label="Add Incidents" icon="fas fa-bolt"
-                        :active="request()->routeIs('admin.incidents.*')" />
+                    
                     <x-sidebar.link route="admin.tourist-visitor-details.index" label="Tourist Visitors"
                         icon="fas fa-users" :active="request()->routeIs('admin.tourist-visitor-details.*')" />
                     <x-sidebar.link route="admin.seasons.index" label="Seasons" icon="fas fa-cloud-sun"

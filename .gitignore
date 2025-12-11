@@ -38,9 +38,9 @@ package-lock.json
 /storage/pail
 
 # Build system (per your request these lines are removed)
-# build/
-# storage/
-# storage.zip
+build/
+storage/
+storage.zip
 
 # Vite Hot Reload
 /public/hot

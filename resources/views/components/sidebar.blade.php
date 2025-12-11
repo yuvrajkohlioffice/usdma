@@ -32,6 +32,8 @@
 <x-sidebar.link route="admin.incidents.index" label="Add Incidents" icon="fas fa-bolt"
                         :active="request()->routeIs('admin.incidents.*')" />
             {{-- 👑 Admin Section --}}
+            <x-sidebar.link route="admin.dhams.index" label="Dhams" icon="fas fa-place-of-worship"
+                        :active="request()->routeIs('admin.dhams.*')" />
             <x-sidebar.dropdown icon="fas fa-user-shield" label="Admin" :active="request()->routeIs('admin.users.*') || request()->routeIs('admin.roles.*') || request()->routeIs('admin.daily_reports_fillable.*') || request()->routeIs('admin.accidental-reports-fillable.*') ||
                     request()->routeIs('admin.accidental_reports.*')">
 
@@ -85,8 +87,7 @@
                     <x-sidebar.link route="admin.states.index" label="States" icon="fas fa-flag" :active="request()->routeIs('admin.states.*')" />
                     <x-sidebar.link route="admin.districts.index" label="Districts" icon="fas fa-city"
                         :active="request()->routeIs('admin.districts.*')" />
-                    <x-sidebar.link route="admin.dhams.index" label="Dhams" icon="fas fa-place-of-worship"
-                        :active="request()->routeIs('admin.dhams.*')" />
+                    
                     <x-sidebar.link route="admin.tehsils.index" label="Tehsils" icon="fas fa-map" :active="request()->routeIs('admin.tehsils.*')" />
                     <x-sidebar.link route="admin.villages.index" label="Villages" icon="fas fa-home"
                         :active="request()->routeIs('admin.villages.*')" />
